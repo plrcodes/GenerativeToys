@@ -133,43 +133,6 @@
             cursor: pointer;
             font-size: 1.5rem;
         }
-        /* New styles for the screenshot temporary container */
-        #screenshot-temp {
-            display: none; /* Initially hidden */
-            flex-direction: row;
-            justify-content: center;
-            align-items: flex-start;
-            background-color: #1a202c;
-            padding: 20px;
-            color: #e2e8f0;
-            box-sizing: border-box;
-            width: 1200px;
-            height: 600px;
-        }
-        #screenshot-temp .grid-container-clone {
-            width: 560px;
-            height: 560px;
-            border: 2px solid #4a5568;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-            margin-right: 20px;
-        }
-        #screenshot-temp .stats-container-clone {
-            display: flex;
-            flex-direction: column;
-            width: 560px;
-        }
-        #screenshot-temp .stats-container-clone #dashboard-clone {
-            display: block !important;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            background-color: #2d3748;
-        }
-        .grid-clone-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
     </style>
 </head>
 <body>
@@ -275,64 +238,46 @@
     <div id="helpModal">
         <div id="helpContent">
             <span id="closeHelp">&times;</span>
-            <h3>Mould Simulation Rules</h3>
+            <h3 class="text-2xl font-bold mb-4 text-white">Mould Simulation Rules</h3>
 
-            <p>This is a simulation of mould growth on a a $20 \times 20$ grid. At each generation, cells can grow, age, and die based on a set of probabilistic rules.</p>
+            <p class="mb-4 text-gray-300">This is a simulation of mould growth on a 20 &times; 20 grid. At each generation, cells can grow, age, and die based on a set of probabilistic rules.</p>
 
-            <h4>Mould Life Cycle</h4>
+            <h4 class="text-xl font-semibold mt-6 mb-2 text-white">Mould Life Cycle</h4>
 
-            <ul>
-                <li>A new cell starts out **white**.</li>
-
-                <li>It gradually turns **gray** over the first 10 generations.</li>
-
-                <li>After 10 generations, it begins to turn **red** as it ages.</li>
-
+            <ul class="list-disc pl-6 mb-4 text-gray-300 space-y-2">
+                <li>A new cell starts out <b class="text-white">white</b>.</li>
+                <li>It gradually turns <b class="text-gray-400">gray</b> over the first 10 generations.</li>
+                <li>After 10 generations, it begins to turn <b class="text-red-400">red</b> as it ages.</li>
                 <li>Once a cell is over 10 generations old, its chance of dying in any given turn starts at 20% and increases by 5% each generation, capping at a maximum of 90%.</li>
-
-                <li>The oldest cell on the grid is always highlighted with a **yellow box**.</li>
+                <li>The oldest cell on the grid is always highlighted with a <b class="text-yellow-400">yellow box</b>.</li>
             </ul>
 
-            <h4>Growth Conditions</h4>
+            <h4 class="text-xl font-semibold mt-6 mb-2 text-white">Growth Conditions</h4>
 
-            <p>The chance of a new mould cell spawning in an adjacent empty spot is determined by the number of live neighbors it has, as controlled by the sliders, and based on how ‘crowded’ it is - i.e. how many of the surrounding cells are already occupied. These sliders take effect as soon as you change them i.e. you can alter them during a run and see the results in real time.</p>
+            <p class="mb-4 text-gray-300">The chance of a new mould cell spawning in an adjacent empty spot is determined by the number of live neighbors it has, as controlled by the sliders, and based on how ‘crowded’ it is - i.e. how many of the surrounding cells are already occupied. These sliders take effect as soon as you change them i.e. you can alter them during a run and see the results in real time.</p>
 
-            <h4>Disasters</p>
+            <h4 class="text-xl font-semibold mt-6 mb-2 text-white">Disasters</h4>
 
-            <ul>
-                <li>**Bleach Splash:** This is a localized attack. Click this button, then click on the grid to apply bleach. The bleach's effect is strongest at the center and fades with distance and over time. Cells in the bleached area have a chance of dying.</li>
-
-                <li>**Drought:** This is a global, 50-generation disaster. Empty cells turn brown, and the growth rate for all mould with 0-5 neighbors drops to 0%. However, mould in dense clusters with 6-7 neighbors gets a guaranteed 20% chance to grow, allowing them to survive and colonize.</li>
+            <ul class="list-disc pl-6 mb-4 text-gray-300 space-y-2">
+                <li><b class="text-white">Bleach Splash:</b> This is a localized attack. Click this button, then click on the grid to apply bleach. The bleach's effect is strongest at the center and fades with distance and over time. Cells in the bleached area have a chance of dying.</li>
+                <li><b class="text-white">Drought:</b> This is a global, 50-generation disaster. Empty cells turn brown, and the growth rate for all mould with 0-5 neighbors drops to 0%. However, mould in dense clusters with 6-7 neighbors gets a guaranteed 20% chance to grow, allowing them to survive and colonize.</li>
             </ul>
 
-            <h4>Stats Dashboard</h4>
+            <h4 class="text-xl font-semibold mt-6 mb-2 text-white">Stats Dashboard</h4>
 
-            <p>This dashboard provides a visual summary of the simulation's state when you press **Pause**.</p>
+            <p class="mb-4 text-gray-300">This dashboard provides a visual summary of the simulation's state when you press <b class="text-white">Pause</b>.</p>
 
-            <ul>
-                <li>**Occupied Cells:** Shows the percentage of the grid covered by mould. The **horizontal bar** changes color based on density (green for low, yellow for medium, red for high), and the graph below it shows the population percentage over time.</li>
-
-                <li>**Population Dynamics:** This bar chart provides a breakdown of the population's changes in the last generation. The bars show the number of **new cells spawned** and **cells that died**, as well as the age distribution of the mould population, divided into five equal groups (quintiles).</li>
-
-                <li>**Average Age:** The average age of all living mould cells.</li>
-
-                <li>**Oldest Cell Age:** The age of the single oldest cell in the simulation.</li>
-
-                <li>**Growth Rate:** The net change in the number of mould cells since the last generation (spawns minus deaths).</li>
+            <ul class="list-disc pl-6 mb-4 text-gray-300 space-y-2">
+                <li><b class="text-white">Occupied Cells:</b> Shows the percentage of the grid covered by mould. The <b class="text-white">horizontal bar</b> changes color based on density (green for low, yellow for medium, red for high), and the graph below it shows the population percentage over time.</li>
+                <li><b class="text-white">Population Dynamics:</b> This bar chart provides a breakdown of the population's changes in the last generation. The bars show the number of <b class="text-white">new cells spawned</b> and <b class="text-white">cells that died</b>, as well as the age distribution of the mould population, divided into five equal groups (quintiles).</li>
+                <li><b class="text-white">Average Age:</b> The average age of all living mould cells.</li>
+                <li><b class="text-white">Oldest Cell Age:</b> The age of the single oldest cell in the simulation.</li>
+                <li><b class="text-white">Growth Rate:</b> The net change in the number of mould cells since the last generation (spawns minus deaths).</li>
             </ul>
-            <br>
-            <p>Coded with Gemini 2.5 by Peter le Roux 2025</p>
-        </div>
-    </div>
-    
-    <!-- Temporary container for screenshot generation -->
-    <div id="screenshot-temp">
-        <div class="grid-container-clone" style="width: 560px; height: 560px;">
-            <canvas id="grid-clone-canvas" class="grid-clone-canvas" width="560" height="560"></canvas>
-        </div>
-        <div class="stats-container-clone">
-            <div id="sliders-clone"></div>
-            <div id="dashboard-clone"></div>
+            
+            <div class="mt-8 pt-4 border-t border-gray-600 text-center">
+                <p class="text-gray-400 text-sm">Coded with Gemini 2.5 by <a href="https://peterleroux.co.za" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline transition-colors">Peter le Roux</a> 2025</p>
+            </div>
         </div>
     </div>
 
@@ -406,6 +351,7 @@
             const value67 = document.getElementById('value6-7');
 
             let grid = [];
+            let cellElements = []; // Cached array for rendering
             let isRunning = false;
             let interactionMode = 'none'; // 'none', 'bleach'
             let intervalId;
@@ -422,6 +368,8 @@
             function createGrid() {
                 gridContainer.innerHTML = '';
                 grid = new Array(GRID_SIZE).fill(null).map(() => new Array(GRID_SIZE).fill(null).map(() => ({ isAlive: false, age: 0, bleach: 0 })));
+                cellElements = new Array(GRID_SIZE).fill(null).map(() => new Array(GRID_SIZE).fill(null));
+                
                 for (let r = 0; r < GRID_SIZE; r++) {
                     for (let c = 0; c < GRID_SIZE; c++) {
                         const cell = document.createElement('div');
@@ -429,6 +377,7 @@
                         cell.dataset.row = r;
                         cell.dataset.col = c;
                         gridContainer.appendChild(cell);
+                        cellElements[r][c] = cell; // Cache DOM element
                     }
                 }
             }
@@ -471,36 +420,36 @@
             }
 
             function renderGrid() {
-                const cells = gridContainer.querySelectorAll('.cell');
-                cells.forEach(cellElement => {
-                    const row = parseInt(cellElement.dataset.row);
-                    const col = parseInt(cellElement.dataset.col);
-                    const cellState = grid[row][col];
-                    cellElement.classList.remove('oldest-cell');
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        const cellElement = cellElements[r][c];
+                        const cellState = grid[r][c];
+                        
+                        cellElement.classList.remove('oldest-cell');
 
-                    if (cellState.isAlive) {
-                        cellElement.classList.add('alive');
-                        let cellColor = getColorFromAge(cellState.age);
-                        if (cellState.bleach > 0) {
-                            cellColor = lerpColor(cellColor, `rgb(200, 255, 255)`, cellState.bleach / 100);
+                        if (cellState.isAlive) {
+                            cellElement.classList.add('alive');
+                            let cellColor = getColorFromAge(cellState.age);
+                            if (cellState.bleach > 0) {
+                                cellColor = lerpColor(cellColor, `rgb(200, 255, 255)`, cellState.bleach / 100);
+                            }
+                            cellElement.style.backgroundColor = cellColor;
+                        } else {
+                            cellElement.classList.remove('alive');
+                            if (cellState.bleach > 0) {
+                                cellElement.style.backgroundColor = lerpColor(`rgb(45, 55, 72)`, `rgb(200, 255, 255)`, cellState.bleach / 100);
+                            } else if (isDroughtActive) {
+                                cellElement.style.backgroundColor = '#624623';
+                            } else {
+                                cellElement.style.backgroundColor = '';
+                            }
                         }
-                        cellElement.style.backgroundColor = cellColor;
-                    } else {
-                        cellElement.classList.remove('alive');
-                        if (cellState.bleach > 0) {
-                             cellElement.style.backgroundColor = lerpColor(`rgb(45, 55, 72)`, `rgb(200, 255, 255)`, cellState.bleach / 100);
-                        } else if (isDroughtActive) {
-                             cellElement.style.backgroundColor = '#624623';
-                        }
-                        else {
-                             cellElement.style.backgroundColor = '';
+
+                        if (oldestCell && oldestCell.r === r && oldestCell.c === c) {
+                            cellElement.classList.add('oldest-cell');
                         }
                     }
-
-                    if (oldestCell && oldestCell.r === row && oldestCell.c === col) {
-                        cellElement.classList.add('oldest-cell');
-                    }
-                });
+                }
             }
 
             // --- Simulation Logic ---
@@ -539,11 +488,21 @@
             }
 
             function updateGrid() {
-                const nextGrid = JSON.parse(JSON.stringify(grid));
+                // Efficient 2D array deep copy mapping
+                const nextGrid = grid.map(row => row.map(cell => ({ ...cell })));
+                
                 lastStepSpawns = 0;
                 lastStepDeaths = 0;
                 let maxAge = -1;
                 oldestCell = null;
+
+                // Cache slider values outside the loop for performance
+                const spawnChances = {
+                    0: parseInt(slider0.value) / 100,
+                    13: parseInt(slider13.value) / 100,
+                    45: parseInt(slider45.value) / 100,
+                    67: parseInt(slider67.value) / 100
+                };
 
                 for (let r = 0; r < GRID_SIZE; r++) {
                     for (let c = 0; c < GRID_SIZE; c++) {
@@ -589,15 +548,10 @@
                                         spawnChance = DROUGHT_LOW_GROWTH / 100;
                                     }
                                 } else {
-                                    if (liveNeighbors === 0) {
-                                        spawnChance = parseInt(slider0.value) / 100;
-                                    } else if (liveNeighbors >= 1 && liveNeighbors <= 3) {
-                                        spawnChance = parseInt(slider13.value) / 100;
-                                    } else if (liveNeighbors >= 4 && liveNeighbors <= 5) {
-                                        spawnChance = parseInt(slider45.value) / 100;
-                                    } else if (liveNeighbors >= 6 && liveNeighbors <= 7) {
-                                        spawnChance = parseInt(slider67.value) / 100;
-                                    }
+                                    if (liveNeighbors === 0) spawnChance = spawnChances[0];
+                                    else if (liveNeighbors >= 1 && liveNeighbors <= 3) spawnChance = spawnChances[13];
+                                    else if (liveNeighbors >= 4 && liveNeighbors <= 5) spawnChance = spawnChances[45];
+                                    else if (liveNeighbors >= 6 && liveNeighbors <= 7) spawnChance = spawnChances[67];
                                 }
 
                                 if (Math.random() < spawnChance) {
@@ -956,6 +910,10 @@
                 drawSparkline(clonedSparkline, occupiedHistory);
                 
                 rightColumn.appendChild(dashboardClone);
+                
+                const creditClone = document.createElement('div');
+                creditClone.innerHTML = `<p style="color: #9ca3af; font-size: 0.875rem; text-align: center; margin-top: 2rem;">Coded with Gemini 2.5 by <a href="https://peterleroux.co.za" style="color: #818cf8; text-decoration: underline;">Peter le Roux</a> 2025</p>`;
+                rightColumn.appendChild(creditClone);
                 
                 screenshotTempContainer.appendChild(leftColumn);
                 screenshotTempContainer.appendChild(rightColumn);
