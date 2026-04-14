@@ -3,122 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crossroads Village Generator</title>
+    <title>Random Crossroads Village Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load the main D3 library first --><script src="https://d3js.org/d3.v7.min.js"></script>
-    <!-- Then load the delaunay add-on --><script src="https://d3js.org/d3-delaunay.v7.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-delaunay.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4e2ca; /* Light sepia parchment */
-            color: #5a4b3a; /* Darker sepia text */
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f4e2ca; color: #5a4b3a; }
+        .canvas-container { aspect-ratio: 1 / 1; width: 100%; max-width: 700px; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f4e2ca; }
+        ::-webkit-scrollbar-thumb { background: #c5b39a; border-radius: 4px; }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-3xl bg-amber-50 rounded-2xl shadow-2xl p-6 md:p-8 relative">
-        <!-- 2. Help Button --><button id="helpButton" class="absolute top-4 right-4 w-10 h-10 bg-amber-200 text-amber-800 rounded-full flex items-center justify-center text-xl font-bold hover:bg-amber-300 transition-all shadow-sm">
-            ?
-        </button>
+    <div class="w-full max-w-3xl bg-amber-50 rounded-2xl shadow-2xl p-6 md:p-8 relative border border-amber-200/50">
+        <button id="helpButton" class="absolute top-4 right-4 w-10 h-10 bg-amber-200 text-amber-800 rounded-full flex items-center justify-center text-xl font-bold hover:bg-amber-300 transition-all shadow-sm">?</button>
 
         <header class="text-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-bold text-amber-900">Random crossroads village generator</h1>
-            <p id="villageSubtitle" class="text-amber-700 mt-2">Generating village...</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-amber-900 tracking-tight">Random crossroads village generator</h1>
+            <p id="villageSubtitle" class="text-amber-700 mt-2 font-medium italic text-lg uppercase tracking-widest">Generating...</p>
         </header>
         
-        <div class="aspect-square w-full bg-amber-100 rounded-xl overflow-hidden shadow-inner border border-amber-300">
+        <div class="canvas-container bg-amber-100 rounded-xl overflow-hidden shadow-inner border border-amber-300 mx-auto">
             <canvas id="mapCanvas"></canvas>
         </div>
 
-        <div class="mt-6 text-center">
-            <button id="regenerateButton" class="bg-amber-700 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-transform duration-200 active:scale-95 shadow-lg">
-                Make another one 🎲
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+            <button id="regenerateButton" class="bg-amber-800 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-lg transition-all active:scale-95 shadow-lg flex items-center gap-2">
+                <span>Make another one</span> 🎲
             </button>
-            <button id="exportButton" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-6 rounded-lg transition-transform duration-200 active:scale-95 shadow-lg ml-4">
+            <button id="exportButton" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-6 rounded-lg transition-all active:scale-95 shadow-lg">
                 Export PNG
             </button>
-             <!-- 1. Removed Seed Count Paragraph --></div>
+        </div>
     </div>
 
-    <!-- 3. Help Modal --><div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <!-- Overlay --><div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-75"></div>
-        
-        <!-- Modal Content --><div class="bg-amber-50 rounded-2xl shadow-2xl p-6 md:p-8 max-w-2xl w-full z-10 max-h-[80vh] overflow-y-auto">
-            <h2 class="text-2xl font-bold text-amber-900 mb-4">How This Map is Generated</h2>
-            
-            <div class="space-y-4 text-amber-800">
-                <div>
-                    <h3 class="font-bold text-lg text-amber-900">1. Seed Generation</h3>
-                    <p class="mt-1">The map starts with a uniform 8x8 grid of 64 points. Each point is randomly "jiggled" by up to 6.5% of its grid spacing. Then, 10 random, adjacent pairs of points are merged into one, leaving 54 unique "seed" points for the plots.</p>
-                </div>
-                <div>
-                    <h3 class="font-bold text-lg text-amber-900">2. Road Network</h3>
-                    <ul class="list-disc list-inside mt-1 space-y-1">
-                        <li><b>Main Roads:</b> A North-South road is generated by finding a path from a central point at the top to the bottom. An East-West road does the same from left to right, creating a crossroads.</li>
-                        <li><b>Driveways:</b> The script checks if any Suburban (yellow) plots are "stranded" (not touching a road). If one is, it finds the shortest path along the plot boundaries to the nearest main road and turns it into a thinner "driveway".</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="font-bold text-lg text-amber-900">3. Village Zoning</h3>
-                    <p class="mt-1">Every plot is assigned a zone based on its relationship to the roads:</p>
-                    <ul class="list-disc list-inside mt-1 space-y-1">
-                        <li><b class="text-[#e0d0b0] bg-black/50 px-1 rounded">Urban:</b> A plot that touches at least 2 road segments and is not on the map's outer edge.</li>
-                        <li><b class="text-[#f4e2ca] bg-black/50 px-1 rounded">Suburban:</b> A plot that is not Urban, but is adjacent to an Urban plot.</li>
-                        <li><b class="text-[#f4e2ca] bg-black/50 px-1 rounded">Rural:</b> Any plot that is neither Urban nor Suburban.</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="font-bold text-lg text-amber-900">4. Drawing Features</h3>
-                    <ul class="list-disc list-inside mt-1 space-y-1">
-                        <li><b>Urban Buildings:</b> Narrow, "ramshackle" buildings are drawn along the road frontages, set back by a tiny, random amount to create a sidewalk. Their depth is random (20-40%) to create an irregular skyline.</li>
-                        <li><b>Suburban Houses:</b> L, T, or U-shaped houses are placed at the center of each suburban plot. They are rotated to align with the nearest main road or fence line.</li>
-                        <li><b>Rural Trees:</b> Simple, sepia-toned trees with branches and shadows are scattered across all rural land. The script ensures they don't grow on top of roads.</li>
-                        <li><b>Fences:</b> A thin line with dark posts is drawn on any boundary between plots, as long as it's not a road and not between two rural plots.</li>
-                    </ul>
-                </div>
-            </div>
+    <footer class="mt-8 text-center text-amber-800/80 text-sm font-medium z-10 relative">
+        <a href="https://peterleroux.co.za" target="_blank" class="hover:text-amber-900 hover:underline transition-colors">peterleroux.co.za</a>
+    </footer>
 
-            <div class="text-right mt-6">
-                <button id="closeHelpButton" class="bg-amber-700 hover:bg-amber-600 text-white font-bold py-2 px-5 rounded-lg transition-transform duration-200 active:scale-95 shadow-lg">
-                    Close
-                </button>
+    <!-- Help Modal -->
+    <div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div id="modalOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="bg-amber-50 rounded-2xl shadow-2xl p-6 md:p-8 max-w-2xl w-full z-10 max-h-[85vh] overflow-y-auto border border-amber-200 relative">
+            <h2 class="text-2xl font-bold text-amber-900 mb-6 border-b border-amber-200 pb-2">Procedural Rules</h2>
+            <div class="space-y-6 text-amber-900/80 leading-relaxed">
+                <section>
+                    <h3 class="font-bold text-amber-900">Name Generation</h3>
+                    <p>The village name is procedurally generated by randomly selecting and combining a prefix (like "Oak" or "West") and a suffix (like "ham" or "ford") from two curated lists of classic village names.</p>
+                </section>
+                <section>
+                    <h3 class="font-bold text-amber-900">Geometry</h3>
+                    <p>Plots are Lloyd-relaxed Voronoi cells based on a jiggled 8x8 grid with 10 random merges to simulate larger estates.</p>
+                </section>
+                <section>
+                    <h3 class="font-bold text-amber-900">Infrastructure</h3>
+                    <p>Main roads are calculated using a greedy pathfinding algorithm toward cardinal opposites. Stranded suburban lots trigger the creation of thin driveways.</p>
+                </section>
+                <section>
+                    <h3 class="font-bold text-amber-900">4. Drawing Features</h3>
+                    <ul class="list-disc list-inside mt-1 space-y-1">
+                        <li><b>Urban Buildings:</b> Narrow, "ramshackle" buildings are drawn along the road frontages, set back by a small random amount to create a sidewalk. Their depth is random (20-40%) to create an irregular skyline.</li>
+                        <li><b>Suburban Houses:</b> L, T, or U-shaped houses are placed at the center of each suburban plot. They are dynamically pushed back if they intersect a main road.</li>
+                        <li><b>Rural Trees:</b> Simple, sepia-toned trees with branches and shadows are scattered across all rural land. The script ensures they don't grow on top of roads.</li>
+                        <li><b>Fences & Walls:</b> Boundaries touching an urban plot get thick, irregular "sketchy" stone walls. Boundaries between suburban/rural plots get a thin wire line with spaced wooden posts. Fences are not drawn in the open countryside.</li>
+                    </ul>
+                </section>
+            </div>
+            <div class="text-right mt-8">
+                <button id="closeHelpButton" class="bg-amber-800 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded-lg transition-all active:scale-95">Close</button>
             </div>
         </div>
     </div>
 
-
     <script>
-        const canvas = document.getElementById('mapCanvas');
-        const ctx = canvas.getContext('2d');
-        const regenerateButton = document.getElementById('regenerateButton');
-        const exportButton = document.getElementById('exportButton');
-        const subtitleEl = document.getElementById('villageSubtitle');
+        const CONFIG = {
+            colors: {
+                bg: '#f4e2ca',
+                urbanFill: '#e0d0b0',
+                road: '#3e2a0f',
+                building: '#62461b',
+                fence: '#362513',
+                wall: '#4a3525', // Thicker, darker color for stone walls
+                tree: '#8c775d',
+                treeShadow: 'rgba(90, 75, 60, 0.2)'
+            },
+            gridSize: 8,
+            merges: 10,
+            roadWidth: (w) => Math.max(10, w / 50),
+            drivewayWidth: (w) => Math.max(5, w / 100)
+        };
 
-        // Help Modal Elements
-        const helpButton = document.getElementById('helpButton');
-        const helpModal = document.getElementById('helpModal');
-        const closeHelpButton = document.getElementById('closeHelpButton');
-        const modalOverlay = document.getElementById('modalOverlay');
-        
-        let seeds = [];
-        let currentVillageName = ""; // To store the name for export
+        const NAME_GEN = {
+            prefixes: ["Oak", "Ash", "West", "East", "North", "South", "Stone", "Mill", "Brook", "Fern", "Stony", "Barrow", "Faw", "Fair", "Green", "Shep", "Elm", "Wick", "High", "Deer"],
+            suffixes: ["ham", "ton", "bury", "ford", "hollow", "wold", "wick", "hurst", "mere", "brook"]
+        };
 
-        // --- Village Name Generator Data ---
-        const prefixes = ["Oak", "Ash", "West", "East", "North", "South", "Stone", "Mill", "Brook", "Fern", "Stony", "Barrow", "Faw", "Fair", "Green", "Shep", "Elm", "Wick", "High", "Deer"];
-        const suffixes = ["ham", "ton", "bury", "ford", "hollow", "wold", "wick", "hurst", "mere", "brook"];
-        
-        // --- HELPER FUNCTIONS ---
+        // --- GLOBAL HELPERS ---
         function getPolygonCentroid(pts) {
             if (!pts || pts.length === 0) return [0,0];
-            const nPts = pts.length;
             let first = pts[0], last = pts[pts.length - 1];
             if (first[0] !== last[0] || first[1] !== last[1]) pts = [...pts, first];
 
             let twicearea = 0, x = 0, y = 0;
             let p1, p2, f;
-            for (let i = 0, j = nPts - 1; i < nPts; j = i++) {
+            for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
                 p1 = pts[i]; p2 = pts[j];
                 f = (p1[1] - first[1]) * (p2[0] - first[0]) - (p1[0] - first[0]) * (p2[1] - first[1]);
                 twicearea += f;
@@ -130,956 +121,494 @@
             return [x / f + first[0], y / f + first[1]];
         }
 
-        function getPolygonArea(pts) {
-            if (!pts || pts.length < 3) return 0;
-            let area = 0;
-            for (let i = 0; i < pts.length; i++) {
-                const j = (i + 1) % pts.length;
-                area += pts[i][0] * pts[j][1];
-                area -= pts[j][0] * pts[i][1];
+        function isPointInPolygon(p, vs) {
+            let x = p[0], y = p[1], inside = false;
+            for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                if (((vs[i][1] > y) !== (vs[j][1] > y)) && (x < (vs[j][0] - vs[i][0]) * (y - vs[i][1]) / (vs[j][1] - vs[i][1]) + vs[i][0])) inside = !inside;
             }
-            return Math.abs(area / 2.0);
+            return inside;
         }
 
         function pointToSegmentDistance(p, v, w) {
-            const l2 = (v[0] - w[0])**2 + (v[1] - w[1])**2;
-            if (l2 === 0) return Math.sqrt((p[0] - v[0])**2 + (p[1] - v[1])**2);
-            let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+            const l2 = Math.pow(v[0]-w[0], 2) + Math.pow(v[1]-w[1], 2);
+            if (l2 === 0) return Math.hypot(p[0]-v[0], p[1]-v[1]);
+            let t = ((p[0]-v[0])*(w[0]-v[0]) + (p[1]-v[1])*(w[1]-v[1])) / l2;
             t = Math.max(0, Math.min(1, t));
-            const projection = [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
-            return Math.sqrt((p[0] - projection[0])**2 + (p[1] - projection[1])**2);
+            return Math.hypot(p[0] - (v[0] + t*(w[0]-v[0])), p[1] - (v[1] + t*(w[1]-v[1])));
         }
 
-        function isPointInPolygon(point, vs) {
-            if (!point || !vs || vs.length === 0) return false;
-            const x = point[0], y = point[1];
-            let inside = false;
-            for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-                const xi = vs[i][0], yi = vs[i][1];
-                const xj = vs[j][0], yj = vs[j][1];
-                const intersect = ((yi > y) !== (yj > y))
-                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-            }
-            return inside;
-        };
-        
-        function generateNormalizedSeeds(gridSize = 8, perturbation = 0.065, merges = 10) {
-            const grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(null));
-            const merged = Array(gridSize).fill(null).map(() => Array(gridSize).fill(false));
-            const step = 1 / gridSize;
-            const perturbationAmount = step * perturbation;
-
-            for (let r = 0; r < gridSize; r++) {
-                for (let c = 0; c < gridSize; c++) {
-                    const randomX = (Math.random() - 0.5) * 2 * perturbationAmount;
-                    const randomY = (Math.random() - 0.5) * 2 * perturbationAmount;
-                    grid[r][c] = {
-                        x: (c + 0.5) * step + randomX,
-                        y: (r + 0.5) * step + randomY
-                    };
-                }
+        // --- GENERATOR CLASS ---
+        class VillageGenerator {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.seeds = [];
+                this.villageName = "";
+                this.allRoadSegments = [];
             }
 
-            let mergesDone = 0;
-            let attempts = 0;
-            while (mergesDone < merges && attempts < 1000) {
-                attempts++;
-                const r = Math.floor(Math.random() * gridSize);
-                const c = Math.floor(Math.random() * gridSize);
-                if (merged[r][c]) continue;
-                const direction = Math.random() > 0.5 ? 'right' : 'down';
-                let nR = r, nC = c;
-                if (direction === 'right') nC++; else nR++;
-                if (nR < gridSize && nC < gridSize && !merged[nR][nC]) {
-                    const p1 = grid[r][c];
-                    const p2 = grid[nR][nC];
-                    grid[r][c] = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-                    grid[nR][nC] = null;
-                    merged[r][c] = true;
-                    merged[nR][nC] = true;
-                    mergesDone++;
+            init() {
+                const size = this.canvas.parentElement.clientWidth;
+                if (size <= 0) {
+                    requestAnimationFrame(() => this.init());
+                    return;
                 }
+                this.canvas.width = size;
+                this.canvas.height = size;
+                this.generate();
             }
-            if (attempts >= 1000) console.warn("Could not complete all merges.");
 
-            const finalSeeds = [];
-            for (let r = 0; r < gridSize; r++) {
-                for (let c = 0; c < gridSize; c++) {
-                    if (grid[r][c]) finalSeeds.push([grid[r][c].x, grid[r][c].y]);
-                }
+            generate() {
+                this.villageName = NAME_GEN.prefixes[Math.floor(Math.random() * NAME_GEN.prefixes.length)] + 
+                                  NAME_GEN.suffixes[Math.floor(Math.random() * NAME_GEN.suffixes.length)];
+                document.getElementById('villageSubtitle').textContent = this.villageName;
+
+                this.seeds = this.generateSeeds();
+                this.draw();
             }
-            return finalSeeds;
-        }
 
-        function drawMap() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Fill canvas with sepia tone background
-            ctx.fillStyle = '#f4e2ca'; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            generateSeeds() {
+                const s = [];
+                const step = 1 / CONFIG.gridSize;
+                const pert = step * 0.065;
 
-
-            if (seeds.length === 0) return;
-
-            let scaledSeeds = seeds.map(s => [s[0] * canvas.width, s[1] * canvas.height]);
-            
-            const uniquePoints = new Map();
-            scaledSeeds.forEach(point => {
-                const key = `${point[0].toFixed(5)},${point[1].toFixed(5)}`;
-                if (!uniquePoints.has(key)) {
-                    uniquePoints.set(key, point);
+                for (let r = 0; r < CONFIG.gridSize; r++) {
+                    for (let c = 0; c < CONFIG.gridSize; c++) {
+                        s.push([
+                            (c + 0.5) * step + (Math.random() - 0.5) * pert,
+                            (r + 0.5) * step + (Math.random() - 0.5) * pert
+                        ]);
+                    }
                 }
-            });
-            const filteredSeeds = Array.from(uniquePoints.values());
+                for(let i = 0; i < CONFIG.merges; i++) s.splice(Math.floor(Math.random() * s.length), 1);
+                return s;
+            }
 
-            try {
-                if (typeof d3 === 'undefined' || typeof d3.Delaunay === 'undefined') {
-                    throw new Error("D3 library not loaded.");
-                }
+            getDistance(p1, p2) { return Math.hypot(p1[0] - p2[0], p1[1] - p2[1]); }
 
-                const delaunay = d3.Delaunay.from(filteredSeeds);
-                const voronoi = delaunay.voronoi([0, 0, canvas.width, canvas.height]);
+            draw() {
+                const { ctx, canvas } = this;
+                const w = canvas.width;
+                const h = canvas.height;
+                const scaledSeeds = this.seeds.map(p => [p[0] * w, p[1] * h]);
 
-                // --- Build Graph from Voronoi ---
-                const adjacency = new Map();
+                const delaunay = d3.Delaunay.from(scaledSeeds);
+                const voronoi = delaunay.voronoi([0, 0, w, h]);
+
+                // Key Generators (Fixed Precision bug)
+                const getPtKey = p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`;
+                const getEdgeKey = (p1, p2) => {
+                    const k1 = getPtKey(p1), k2 = getPtKey(p2);
+                    return k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
+                };
+
+                // 1. Build Adjacency
                 const vertices = new Map();
-                filteredSeeds.forEach((_, i) => {
-                    const cell = voronoi.cellPolygon(i);
-                    if (cell) {
-                        for (let j = 0; j < cell.length; j++) {
-                            const p1 = cell[j]; const p2 = cell[(j + 1) % cell.length];
-                            const p1Key = `${p1[0].toFixed(2)},${p1[1].toFixed(2)}`;
-                            const p2Key = `${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
-                            if (!vertices.has(p1Key)) vertices.set(p1Key, p1);
-                            if (!vertices.has(p2Key)) vertices.set(p2Key, p2);
-                            if (!adjacency.has(p1Key)) adjacency.set(p1Key, new Set());
-                            if (!adjacency.has(p2Key)) adjacency.set(p2Key, new Set());
-                            adjacency.get(p1Key).add(p2Key); adjacency.get(p2Key).add(p1Key);
-                        }
-                    }
-                });
+                const adjacency = new Map();
+                const margin = 2; 
                 
-                const mainRoadEdges = new Set();
-                const drivewayEdges = new Set();
-                const allRoadSegments = []; // For tree collision
-
-                // --- North-South Road Generation ---
-                let startNodeKeyNS = null;
-                const centerX = canvas.width / 2; const topZone = canvas.height * 0.1;
-                let minDistanceToCenter = Infinity;
-                for (const [key, point] of vertices.entries()) {
-                    if (point[1] < topZone) {
-                        const distance = Math.abs(point[0] - centerX);
-                        if (distance < minDistanceToCenter) { minDistanceToCenter = distance; startNodeKeyNS = key; }
-                    }
-                }
-                if (startNodeKeyNS) {
-                    let path = findPath(startNodeKeyNS, vertices, adjacency, 'S');
-                    path.forEach(edge => mainRoadEdges.add(edge));
-                }
-                
-                // --- East-West Road Generation ---
-                let startNodeKeyEW = null;
-                const centerY = canvas.height / 2; const leftZone = canvas.width * 0.1;
-                let minDistanceToVCenter = Infinity;
-                for (const [key, point] of vertices.entries()) {
-                    if (point[0] < leftZone) {
-                        const distance = Math.abs(point[1] - centerY);
-                        if (distance < minDistanceToVCenter) { minDistanceToVCenter = distance; startNodeKeyEW = key; }
-                    }
-                }
-                 if (startNodeKeyEW) {
-                    let path = findPath(startNodeKeyEW, vertices, adjacency, 'E');
-                    path.forEach(edge => mainRoadEdges.add(edge));
-                }
-
-                // --- Zone Calculation ---
-                const roadAdjacencyCount = new Map();
-                for (let i = 0; i < filteredSeeds.length; i++) {
-                    const cell = voronoi.cellPolygon(i);
-                    if (!cell) continue;
-                    let count = 0;
-                    for (let j = 0; j < cell.length; j++) {
-                        const p1 = cell[j];
-                        const p2 = cell[(j + 1) % cell.length];
-                        const p1Key = `${p1[0].toFixed(2)},${p1[1].toFixed(2)}`;
-                        const p2Key = `${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
-                        const canonicalKey = [p1Key, p2Key].sort().join('|');
-                        if (mainRoadEdges.has(canonicalKey) || drivewayEdges.has(canonicalKey)) {
-                            count++;
-                        }
-                    }
-                    roadAdjacencyCount.set(i, count);
-                }
-
-                const urbanCells = new Set();
-                for (const [cellIndex, count] of roadAdjacencyCount.entries()) {
-                    if (count >= 2) {
-                        const cell = voronoi.cellPolygon(cellIndex);
-                        if (!cell) continue;
-
-                        let touchesBoundary = false;
-                        for (const point of cell) {
-                            if (point[0] <= 1 || point[0] >= canvas.width - 1 || point[1] <= 1 || point[1] >= canvas.height - 1) {
-                                touchesBoundary = true;
-                                break;
-                            }
-                        }
-                        if (!touchesBoundary) {
-                            urbanCells.add(cellIndex);
+                for (let i = 0; i < scaledSeeds.length; i++) {
+                    const poly = voronoi.cellPolygon(i);
+                    if (!poly) continue;
+                    for (let j = 0; j < poly.length; j++) {
+                        const p1 = poly[j], p2 = poly[(j + 1) % poly.length];
+                        const k1 = getPtKey(p1), k2 = getPtKey(p2);
+                        
+                        vertices.set(k1, p1); 
+                        vertices.set(k2, p2);
+                        
+                        if (!adjacency.has(k1)) adjacency.set(k1, new Set());
+                        if (!adjacency.has(k2)) adjacency.set(k2, new Set());
+                        
+                        const isPerimeter = (
+                            (p1[0] <= margin && p2[0] <= margin) ||
+                            (p1[0] >= w - margin && p2[0] >= w - margin) ||
+                            (p1[1] <= margin && p2[1] <= margin) ||
+                            (p1[1] >= h - margin && p2[1] >= h - margin)
+                        );
+                        
+                        if (!isPerimeter) {
+                            adjacency.get(k1).add(k2);
+                            adjacency.get(k2).add(k1);
                         }
                     }
                 }
 
-                const distances = new Map();
-                const queue = [];
-                for (let i = 0; i < filteredSeeds.length; i++) {
-                    distances.set(i, Infinity);
-                }
-                urbanCells.forEach(cellIndex => {
-                    distances.set(cellIndex, 0);
-                    queue.push(cellIndex);
-                });
-                let head = 0;
-                while(head < queue.length) {
-                    const currentCellIndex = queue[head++];
-                    const currentDistance = distances.get(currentCellIndex);
-                    for (const neighborIndex of voronoi.neighbors(currentCellIndex)) {
-                        if (distances.get(neighborIndex) === Infinity) {
-                            distances.set(neighborIndex, currentDistance + 1);
-                            queue.push(neighborIndex);
-                        }
-                    }
-                }
-                
-                // --- Connect Stranded Suburban Cells ---
-                
-                const mainRoadVertices = new Set();
-                mainRoadEdges.forEach(canonicalKey => {
-                    const [p1Key, p2Key] = canonicalKey.split('|');
-                    mainRoadVertices.add(p1Key);
-                    mainRoadVertices.add(p2Key);
-                });
-
-                for (let i = 0; i < filteredSeeds.length; i++) {
-                    if (distances.get(i) === 1) {
-                        const cell = voronoi.cellPolygon(i);
-                        if (!cell) continue;
-
-                        let isConnected = false;
-                        const cellVertices = cell.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`);
-                        for (const pKey of cellVertices) {
-                            if (mainRoadVertices.has(pKey)) {
-                                isConnected = true;
-                                break;
-                            }
-                        }
-
-                        if (!isConnected) {
-                            const newPath = findShortestPathToRoad(cellVertices, mainRoadVertices, adjacency);
-                            
-                            newPath.forEach(edgeKey => {
-                                drivewayEdges.add(edgeKey);
-                                // Add new driveway vertices to main road set so other driveways can connect
-                                const [p1Key, p2Key] = edgeKey.split('|');
-                                mainRoadVertices.add(p1Key);
-                                mainRoadVertices.add(p2Key);
-                            });
-                        }
-                    }
-                }
-                
-                // --- Calculate Road Widths (needed for features) ---
-                const mainRoadWidth = Math.max(10, canvas.width/50);
-                const drivewayWidth = Math.max(5, canvas.width/100);
-
-                // --- NEW DRAW ORDER: Step 1: Draw Cell Fills ---
-                const ruralTreePoints = [];
-                const allCellData = []; // Store cell data for later drawing steps
-                
-                for (let i = 0; i < filteredSeeds.length; i++) {
-                    const cell = voronoi.cellPolygon(i);
-                    if (!cell) continue;
+                // 2. Paths
+                const mainRoads = new Set();
+                const findRoad = (startKey, targetVec) => {
+                    let currKey = startKey;
+                    const visited = new Set();
                     
-                    const distance = distances.get(i);
-                    allCellData.push({cell, distance, index: i}); // Store cell and its properties
+                    for(let i = 0; i < 60; i++) { 
+                        if(!currKey) break;
+                        visited.add(currKey);
+                        
+                        const currP = vertices.get(currKey);
+                        const neighbors = [...(adjacency.get(currKey) || [])].filter(k => !visited.has(k));
+                        
+                        if(!neighbors.length) break; 
+                        
+                        let bestNext = null;
+                        let bestScore = -Infinity;
+                        
+                        neighbors.forEach(nKey => {
+                            const nP = vertices.get(nKey);
+                            const dx = nP[0] - currP[0];
+                            const dy = nP[1] - currP[1];
+                            const dist = Math.hypot(dx, dy);
+                            if (dist === 0) return;
+                            
+                            const nx = dx / dist;
+                            const ny = dy / dist;
+                            
+                            const dot = nx * targetVec[0] + ny * targetVec[1];
+                            const drift = Math.abs(nx * targetVec[1] - ny * targetVec[0]);
+                            const score = dot - (drift * 0.4);
+                            
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestNext = nKey;
+                            }
+                        });
+                        
+                        if(!bestNext) break;
+                        
+                        const edgeKey = bestNext < currKey ? `${bestNext}|${currKey}` : `${currKey}|${bestNext}`;
+                        mainRoads.add(edgeKey);
+                        currKey = bestNext;
+                        
+                        const endP = vertices.get(currKey);
+                        if (targetVec[0] > 0 && endP[0] >= w - margin) break;
+                        if (targetVec[1] > 0 && endP[1] >= h - margin) break;
+                    }
+                };
 
-                    ctx.beginPath();
-                    ctx.moveTo(cell[0][0], cell[0][1]);
-                    for (let j = 1; j < cell.length; j++) ctx.lineTo(cell[j][0], cell[j][1]);
+                // Find the starting nodes closest to the center of the respective edges
+                let bestNS = null, bestNSDist = Infinity;
+                let bestWE = null, bestWEDist = Infinity;
+                
+                for (const [key, p] of vertices.entries()) {
+                    if (p[1] <= 20) {
+                        const dist = Math.abs(p[0] - w/2);
+                        if (dist < bestNSDist) { bestNSDist = dist; bestNS = key; }
+                    }
+                    if (p[0] <= 20) {
+                        const dist = Math.abs(p[1] - h/2);
+                        if (dist < bestWEDist) { bestWEDist = dist; bestWE = key; }
+                    }
+                }
+
+                if (bestNS) findRoad(bestNS, [0, 1]); 
+                if (bestWE) findRoad(bestWE, [1, 0]); 
+
+                this.allRoadSegments = Array.from(mainRoads).map(k => {
+                    const [k1, k2] = k.split('|');
+                    return { p1: vertices.get(k1), p2: vertices.get(k2), width: CONFIG.roadWidth(w) };
+                });
+
+                // 3. Zoning
+                const zones = new Array(scaledSeeds.length).fill('rural');
+                for (let i = 0; i < scaledSeeds.length; i++) {
+                    const poly = voronoi.cellPolygon(i);
+                    if (!poly) continue;
+                    let roadContacts = 0;
+                    let boundary = false;
+                    for (let j = 0; j < poly.length; j++) {
+                        const p1 = poly[j], p2 = poly[(j+1)%poly.length];
+                        const key = getEdgeKey(p1, p2);
+                        if (mainRoads.has(key)) roadContacts++;
+                        if (p1[0] < 2 || p1[0] > w-2 || p1[1] < 2 || p1[1] > h-2) boundary = true;
+                    }
+                    if (roadContacts >= 2 && !boundary) zones[i] = 'urban';
+                }
+                
+                for (let i = 0; i < scaledSeeds.length; i++) {
+                    if (zones[i] === 'urban') {
+                        for (const n of voronoi.neighbors(i)) if (zones[n] === 'rural') zones[n] = 'suburban';
+                    }
+                }
+
+                // 4. Render
+                ctx.fillStyle = CONFIG.colors.bg;
+                ctx.fillRect(0, 0, w, h);
+
+                for (let i = 0; i < scaledSeeds.length; i++) {
+                    const poly = voronoi.cellPolygon(i);
+                    if (!poly) continue;
+                    ctx.beginPath(); poly.forEach((p, j) => j === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
                     ctx.closePath();
-                    
-                    if (distance === 0) { // URBAN
-                        ctx.fillStyle = '#e0d0b0'; // Slightly darker sepia for urban fill
-                        ctx.fill();
-                    } else if (distance === 1) { // SUBURBAN
-                        ctx.fillStyle = '#f4e2ca'; // Background color
-                        ctx.fill();
-                    } else { // RURAL
-                        const cellTrees = generateRuralTreePoints(cell);
-                        ruralTreePoints.push(...cellTrees);
-                    }
+                    ctx.fillStyle = zones[i] === 'urban' ? CONFIG.colors.urbanFill : CONFIG.colors.bg;
+                    ctx.fill();
                 }
 
-                // --- NEW DRAW ORDER: Step 2: Draw Roads ---
-                ctx.strokeStyle = '#3e2a0f'; // Much darker road color
-                const boundaryMargin = 1; 
-                
-                // Draw Main Roads
-                ctx.lineWidth = mainRoadWidth; 
-                mainRoadEdges.forEach(canonicalKey => {
-                    const [p1Key, p2Key] = canonicalKey.split('|');
-                    const p1 = vertices.get(p1Key);
-                    const p2 = vertices.get(p2Key);
-                    if (p1 && p2) {
-                        const onLeft = p1[0] <= boundaryMargin && p2[0] <= boundaryMargin;
-                        const onRight = p1[0] >= canvas.width - boundaryMargin && p2[0] >= canvas.width - boundaryMargin;
-                        const onTop = p1[1] <= boundaryMargin && p2[1] <= boundaryMargin;
-                        const onBottom = p1[1] >= canvas.height - boundaryMargin && p2[1] >= canvas.height - boundaryMargin;
-                        if (onLeft || onRight || onTop || onBottom) return; 
-                        
-                        ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
-                        allRoadSegments.push({p1, p2, width: mainRoadWidth}); // For tree check
-                    }
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = CONFIG.colors.road;
+                this.allRoadSegments.forEach(r => {
+                    ctx.lineWidth = r.width;
+                    ctx.beginPath(); ctx.moveTo(r.p1[0], r.p1[1]); ctx.lineTo(r.p2[0], r.p2[1]); ctx.stroke();
                 });
 
-                // Draw Driveway Roads
-                ctx.lineWidth = drivewayWidth; 
-                drivewayEdges.forEach(canonicalKey => {
-                    if (mainRoadEdges.has(canonicalKey)) return; 
-                    
-                    const [p1Key, p2Key] = canonicalKey.split('|');
-                    const p1 = vertices.get(p1Key);
-                    const p2 = vertices.get(p2Key);
-                    if (p1 && p2) {
-                        const onLeft = p1[0] <= boundaryMargin && p2[0] <= boundaryMargin;
-                        const onRight = p1[0] >= canvas.width - boundaryMargin && p2[0] >= canvas.width - boundaryMargin;
-                        const onTop = p1[1] <= boundaryMargin && p2[1] <= boundaryMargin;
-                        const onBottom = p1[1] >= canvas.height - boundaryMargin && p2[1] >= canvas.height - boundaryMargin;
-                        if (onLeft || onRight || onTop || onBottom) return; 
-                        
-                        ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
-                        allRoadSegments.push({p1, p2, width: drivewayWidth}); // For tree check
-                    }
-                });
-
-
-                // --- NEW DRAW ORDER: Step 3: Draw Cell Features (Buildings) ---
-                // This loop now correctly draws buildings *after* cells and roads
-                for (const {cell, distance} of allCellData) {
-                    if (distance === 0) { // URBAN
-                        drawUrbanFeatures(ctx, cell, mainRoadEdges, drivewayEdges, mainRoadWidth, drivewayWidth);
-                    } else if (distance === 1) { // SUBURBAN
-                        drawSuburbanFeatures(ctx, cell, mainRoadEdges);
-                    }
+                for (let i = 0; i < scaledSeeds.length; i++) {
+                    const poly = voronoi.cellPolygon(i);
+                    if (!poly) continue;
+                    if (zones[i] === 'urban') this.drawUrban(poly, mainRoads, w, getEdgeKey);
+                    if (zones[i] === 'suburban') this.drawSuburban(poly, mainRoads, w, getEdgeKey);
                 }
 
-                // --- NEW DRAW ORDER: Step 4: Draw Trees (with shadows) ---
-                drawAllRuralTrees(ctx, ruralTreePoints, allRoadSegments);
+                this.drawTrees(voronoi, zones, w);
+                this.drawFences(voronoi, zones, mainRoads, getEdgeKey);
+            }
 
+            drawUrban(poly, roadSet, w, getEdgeKey) {
+                const centroid = getPolygonCentroid(poly);
+                for (let j = 0; j < poly.length; j++) {
+                    const p1 = poly[j], p2 = poly[(j+1)%poly.length];
+                    const key = getEdgeKey(p1, p2);
+                    
+                    if (roadSet.has(key)) {
+                        const angle = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
+                        const len = this.getDistance(p1, p2);
+                        const inwardX = Math.sin(angle), inwardY = -Math.cos(angle);
+                        
+                        const testX = (p1[0]+p2[0])/2 + inwardX * 5, testY = (p1[1]+p2[1])/2 + inwardY * 5;
+                        const factor = isPointInPolygon([testX, testY], poly) ? 1 : -1;
 
-                // --- NEW DRAW ORDER: Step 5: Draw Fences ---
-                const fenceVertices = new Set();
-                const fenceSegments = [];
-
-                // 1. Collect all fence segments and vertices
-                for (let i = 0; i < filteredSeeds.length; i++) {
-                    for (const j of voronoi.neighbors(i)) {
-                        if (i >= j) continue;
-                        const dist_i = distances.get(i);
-                        const dist_j = distances.get(j);
-
-                        const isRural1 = dist_i === undefined || dist_i > 1;
-                        const isRural2 = dist_j === undefined || dist_j > 1;
-
-                        const poly_i = voronoi.cellPolygon(i);
-                        const poly_j = voronoi.cellPolygon(j);
-                        if (!poly_i || !poly_j) continue;
-
-                        const j_points = new Set(poly_j.map(p => `${p[0].toFixed(3)},${p[1].toFixed(3)}`));
-                        const shared_points = poly_i.filter(p => j_points.has(`${p[0].toFixed(3)},${p[1].toFixed(3)}`));
-
-                        if (shared_points.length >= 2) {
-                            const p1 = shared_points[0];
-                            const p2 = shared_points[1];
-                            const p1Key = `${p1[0].toFixed(2)},${p1[1].toFixed(2)}`;
-                            const p2Key = `${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
-                            const canonicalKey = [p1Key, p2Key].sort().join('|');
+                        const halfRoadWidth = CONFIG.roadWidth(w) / 2;
+                        const setback = halfRoadWidth + 2 + Math.random() * 2;
+                        let curr = 5; 
+                        
+                        while (curr < len - 15) {
+                            const bW = 10 + Math.random() * 15;
+                            const bD = 15 + Math.random() * 10;
                             
-                            if (!mainRoadEdges.has(canonicalKey) && !drivewayEdges.has(canonicalKey) && 
-                                (!(isRural1 && isRural2))) {
-                                fenceVertices.add(p1Key);
-                                fenceVertices.add(p2Key);
-                                fenceSegments.push({p1, p2});
+                            const bx = p1[0] + Math.cos(angle) * (curr + bW/2) + inwardX * factor * (setback + bD/2);
+                            const by = p1[1] + Math.sin(angle) * (curr + bW/2) + inwardY * factor * (setback + bD/2);
+
+                            if(isPointInPolygon([bx, by], poly)) {
+                                this.ctx.save();
+                                this.ctx.translate(bx, by);
+                                this.ctx.rotate(angle);
+                                this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                                this.ctx.shadowBlur = 3;
+                                this.ctx.fillStyle = CONFIG.colors.building;
+                                this.ctx.fillRect(-bW/2, -bD/2, bW, bD);
+                                this.ctx.restore();
+                            }
+                            curr += bW + 2;
+                        }
+                    }
+                }
+            }
+
+            drawSuburban(poly, roadSet, w, getEdgeKey) {
+                let ctr = getPolygonCentroid(poly);
+                const size = 12;
+                
+                for (let j = 0; j < poly.length; j++) {
+                    const p1 = poly[j], p2 = poly[(j+1)%poly.length];
+                    const key = getEdgeKey(p1, p2);
+                    if (roadSet.has(key)) {
+                        const distToRoad = pointToSegmentDistance(ctr, p1, p2);
+                        const roadClearance = (CONFIG.roadWidth(w) / 2) + size + 2;
+                        
+                        if (distToRoad < roadClearance) {
+                            const pushDist = roadClearance - distToRoad;
+                            const angle = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
+                            let nx = Math.sin(angle), ny = -Math.cos(angle);
+                            
+                            const midX = (p1[0] + p2[0]) / 2;
+                            const midY = (p1[1] + p2[1]) / 2;
+                            if (!isPointInPolygon([midX + nx * 5, midY + ny * 5], poly)) {
+                                nx *= -1; ny *= -1;
+                            }
+                            ctr[0] += nx * pushDist;
+                            ctr[1] += ny * pushDist;
+                        }
+                    }
+                }
+
+                this.ctx.save();
+                this.ctx.translate(ctr[0], ctr[1]);
+                this.ctx.fillStyle = CONFIG.colors.building;
+                this.ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                this.ctx.shadowBlur = 4;
+                this.ctx.rotate((Math.random() - 0.5) * 0.5);
+                this.ctx.fillRect(-size, -size/2, size*2, size);
+                if(Math.random() > 0.5) this.ctx.fillRect(0, size/2, size, size);
+                this.ctx.restore();
+            }
+
+            drawTrees(voronoi, zones, w) {
+                const trees = [];
+                for(let i = 0; i < zones.length; i++) {
+                    if(zones[i] === 'rural') {
+                        const poly = voronoi.cellPolygon(i);
+                        if (!poly) continue;
+                        
+                        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                        poly.forEach(p => { 
+                            minX = Math.min(minX, p[0]); 
+                            minY = Math.min(minY, p[1]); 
+                            maxX = Math.max(maxX, p[0]); 
+                            maxY = Math.max(maxY, p[1]); 
+                        });
+
+                        for(let n = 0; n < 3; n++) {
+                            const tp = [minX + Math.random() * (maxX - minX), 
+                                        minY + Math.random() * (maxY - minY)];
+                            if(isPointInPolygon(tp, poly)) {
+                                let onRoad = this.allRoadSegments.some(r => pointToSegmentDistance(tp, r.p1, r.p2) < r.width);
+                                if(!onRoad) trees.push(tp);
                             }
                         }
                     }
                 }
 
-                // 2. Draw the fences (Sepia Palette)
-                ctx.fillStyle = '#362513'; // Dark sepia for fence posts
-                ctx.strokeStyle = '#362513'; // Dark sepia for fence lines
-                ctx.lineWidth = 0.5; // Very thin line
-                const postRadius = 1.5;
+                trees.forEach(t => {
+                    const trunkH = 8;
+                    this.ctx.strokeStyle = CONFIG.colors.treeShadow;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath(); this.ctx.moveTo(t[0]+2, t[1]); this.ctx.lineTo(t[0]+4, t[1]-trunkH); this.ctx.stroke();
+                    this.ctx.strokeStyle = CONFIG.colors.tree;
+                    this.ctx.beginPath(); this.ctx.moveTo(t[0], t[1]); this.ctx.lineTo(t[0], t[1]-trunkH); this.ctx.stroke();
+                    this.ctx.beginPath(); 
+                    this.ctx.moveTo(t[0], t[1]-trunkH); this.ctx.lineTo(t[0]-4, t[1]-trunkH-4);
+                    this.ctx.moveTo(t[0], t[1]-trunkH); this.ctx.lineTo(t[0]+4, t[1]-trunkH-4);
+                    this.ctx.stroke();
+                });
+            }
 
-                // 2b. Draw all intermediate posts AND the line
-                const postSpacing = 15; 
-                fenceSegments.forEach(segment => {
-                    const { p1, p2 } = segment;
+            drawFences(voronoi, zones, roadSet, getEdgeKey) {
+                for (let i = 0; i < zones.length; i++) {
+                    for (const n of voronoi.neighbors(i)) {
+                        if (i > n) continue;
+                        if (zones[i] === 'rural' && zones[n] === 'rural') continue;
+                        const poly = voronoi.cellPolygon(i);
+                        const polyN = voronoi.cellPolygon(n);
+                        if(!poly || !polyN) continue;
+                        
+                        const isUrbanBoundary = (zones[i] === 'urban' || zones[n] === 'urban');
 
-                    // Draw the connecting line first
-                    ctx.beginPath();
-                    ctx.moveTo(p1[0], p1[1]);
-                    ctx.lineTo(p2[0], p2[1]);
-                    ctx.stroke();
-
-                    // Draw intermediate posts
-                    const length = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-                    const numPosts = Math.round(length / postSpacing); 
-
-                    if (numPosts > 1) {
-                        for (let i = 1; i < numPosts; i++) { 
-                            const t = i / numPosts;
-                            const postX = p1[0] + (p2[0] - p1[0]) * t;
-                            const postY = p1[1] + (p2[1] - p1[1]) * t;
+                        for(let j=0; j<poly.length; j++) {
+                            const p1 = poly[j], p2 = poly[(j+1)%poly.length];
+                            const key = getEdgeKey(p1, p2);
                             
-                            ctx.beginPath();
-                            ctx.arc(postX, postY, postRadius, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-                    }
-                });
+                            if(!roadSet.has(key)) {
+                                let shared = false;
+                                for(let k=0; k<polyN.length; k++) {
+                                    if (getEdgeKey(polyN[k], polyN[(k+1)%polyN.length]) === key) {
+                                        shared = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if(shared) {
+                                    if (isUrbanBoundary) {
+                                        // 1. Sketchy Stone Wall
+                                        this.ctx.strokeStyle = CONFIG.colors.wall;
+                                        this.ctx.lineCap = 'round';
+                                        
+                                        const dx = p2[0] - p1[0];
+                                        const dy = p2[1] - p1[1];
+                                        const len = Math.hypot(dx, dy);
+                                        const steps = Math.max(1, Math.floor(len / 6)); 
+                                        
+                                        let cx = p1[0];
+                                        let cy = p1[1];
+                                        
+                                        for (let s = 0; s < steps; s++) {
+                                            const t = (s + 1) / steps;
+                                            let nx = p1[0] + dx * t;
+                                            let ny = p1[1] + dy * t;
+                                            
+                                            if (s < steps - 1) {
+                                                const perpX = -dy / len;
+                                                const perpY = dx / len;
+                                                const jitter = (Math.random() - 0.5) * 1.5;
+                                                nx += perpX * jitter;
+                                                ny += perpY * jitter;
+                                            }
 
-                // 2a. Draw all corner posts (on top of lines)
-                fenceVertices.forEach(pKey => {
-                    const p = vertices.get(pKey); 
-                    if (p) {
-                        ctx.beginPath();
-                        ctx.arc(p[0], p[1], postRadius * 1.5, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
-
-            } catch (error) {
-                console.error("Calculation failed:", error);
-                ctx.fillStyle = 'red';
-                ctx.font = '16px Inter';
-                ctx.textAlign = 'center';
-                ctx.fillText('Error. See console.', canvas.width / 2, canvas.height / 2);
-            }
-            
-            // 1. Removed Seed Count Text Update
-        }
-
-        function findPath(startNodeKey, vertices, adjacency, direction = 'S') {
-            const pathEdges = [];
-            if (!startNodeKey) return pathEdges;
-
-            const targetAngle = direction === 'S' ? Math.PI / 2 : 0; 
-            const endCondition = direction === 'S' 
-                ? (p) => p[1] >= canvas.height 
-                : (p) => p[0] >= canvas.width;
-
-            let previousNodeKey = null;
-            let currentNodeKey = startNodeKey;
-            
-            const startNeighbors = Array.from(adjacency.get(currentNodeKey) || []);
-            if (startNeighbors.length > 0) {
-                 let bestInitialNeighbor = '';
-                 let bestInitialAngleDiff = Infinity;
-                 for (const neighborKey of startNeighbors) {
-                    const neighborPoint = vertices.get(neighborKey);
-                    const startPoint = vertices.get(currentNodeKey);
-                    if (neighborPoint && startPoint) {
-                        const angle = Math.atan2(neighborPoint[1] - startPoint[1], neighborPoint[0] - startPoint[0]);
-                        const angleDiff = Math.abs(angle - targetAngle);
-                         if(angleDiff < bestInitialAngleDiff) {
-                            bestInitialAngleDiff = angleDiff;
-                            bestInitialNeighbor = neighborKey;
-                        }
-                    }
-                }
-                if (bestInitialNeighbor) {
-                    previousNodeKey = currentNodeKey;
-                    currentNodeKey = bestInitialNeighbor;
-                    pathEdges.push([previousNodeKey, currentNodeKey].sort().join('|'));
-                }
-            }
-
-
-            for (let i = 0; i < vertices.size; i++) {
-                const currentNodePoint = vertices.get(currentNodeKey);
-                if (!currentNodePoint) break;
-
-                const neighbors = Array.from(adjacency.get(currentNodeKey) || []);
-                const candidates = neighbors.filter(n => n !== previousNodeKey);
-                if (candidates.length === 0) break;
-
-                let bestAngleDiff = Infinity;
-                let tiedCandidates = [];
-                candidates.forEach(candidateKey => {
-                    const candidatePoint = vertices.get(candidateKey);
-                    if (!candidatePoint) return;
-                    const angle = Math.atan2(candidatePoint[1] - currentNodePoint[1], candidatePoint[0] - currentNodePoint[0]);
-                    const angleDiff = Math.abs(angle - targetAngle);
-                    if (angleDiff < bestAngleDiff) {
-                        bestAngleDiff = angleDiff;
-                        tiedCandidates = [candidateKey];
-                    } else if (Math.abs(angleDiff - bestAngleDiff) < 1e-6) {
-                        tiedCandidates.push(candidateKey);
-                    }
-                });
-
-                if (tiedCandidates.length === 0) break;
-                const bestCandidateKey = tiedCandidates[Math.floor(Math.random() * tiedCandidates.length)];
-                pathEdges.push([currentNodeKey, bestCandidateKey].sort().join('|'));
-                previousNodeKey = currentNodeKey;
-                currentNodeKey = bestCandidateKey;
-
-                const newPoint = vertices.get(currentNodeKey);
-                if (!newPoint || endCondition(newPoint)) {
-                    break;
-                }
-            }
-            return pathEdges;
-        }
-
-        function findShortestPathToRoad(startVertices, roadVertices, adjacency) {
-            const queue = [];
-            const visited = new Set();
-            const parent = new Map(); 
-
-            startVertices.forEach(vKey => {
-                if (!visited.has(vKey)) {
-                    queue.push(vKey);
-                    visited.add(vKey);
-                    parent.set(vKey, null);
-                }
-            });
-
-            let pathFoundKey = null;
-            let head = 0;
-
-            while(head < queue.length) {
-                const currentNodeKey = queue[head++];
-                
-                if (roadVertices.has(currentNodeKey)) {
-                    pathFoundKey = currentNodeKey;
-                    break;
-                }
-
-                const neighbors = adjacency.get(currentNodeKey);
-                if (neighbors) {
-                    for (const neighborKey of neighbors) {
-                        if (!visited.has(neighborKey)) {
-                            visited.add(neighborKey);
-                            parent.set(neighborKey, currentNodeKey); 
-                            queue.push(neighborKey);
+                                            this.ctx.lineWidth = 1.5 + Math.random() * 2.5;
+                                            this.ctx.beginPath();
+                                            this.ctx.moveTo(cx, cy);
+                                            this.ctx.lineTo(nx, ny);
+                                            this.ctx.stroke();
+                                            
+                                            cx = nx;
+                                            cy = ny;
+                                        }
+                                    } else {
+                                        // 2. Wooden Fence with Spaced Posts
+                                        this.ctx.strokeStyle = CONFIG.colors.fence;
+                                        this.ctx.lineWidth = 0.5;
+                                        this.ctx.beginPath(); 
+                                        this.ctx.moveTo(p1[0], p1[1]); 
+                                        this.ctx.lineTo(p2[0], p2[1]); 
+                                        this.ctx.stroke();
+                                        
+                                        const dx = p2[0] - p1[0];
+                                        const dy = p2[1] - p1[1];
+                                        const len = Math.hypot(dx, dy);
+                                        const numPosts = Math.round(len / 15);
+                                        
+                                        this.ctx.fillStyle = CONFIG.colors.fence;
+                                        for(let k = 1; k < numPosts; k++) {
+                                            const t = k / numPosts;
+                                            this.ctx.beginPath(); 
+                                            this.ctx.arc(p1[0] + dx * t, p1[1] + dy * t, 1.2, 0, Math.PI*2); 
+                                            this.ctx.fill();
+                                        }
+                                        
+                                        this.ctx.beginPath(); this.ctx.arc(p1[0], p1[1], 1.8, 0, Math.PI*2); this.ctx.fill();
+                                        this.ctx.beginPath(); this.ctx.arc(p2[0], p2[1], 1.8, 0, Math.PI*2); this.ctx.fill();
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-
-            const pathEdges = [];
-            if (pathFoundKey) {
-                let curr = pathFoundKey;
-                let p = parent.get(curr);
-                while (p !== null) {
-                    const edgeKey = [curr, p].sort().join('|');
-                    pathEdges.push(edgeKey);
-                    curr = p;
-                    p = parent.get(curr);
-                }
-            }
-            return pathEdges;
         }
 
-        function lineLineIntersection(p1, p2, p3, p4) {
-            const d = (p1[0] - p2[0]) * (p3[1] - p4[1]) - (p1[1] - p2[1]) * (p3[0] - p4[0]);
-            if (d === 0) return null;
-            const t = ((p1[0] - p3[0]) * (p3[1] - p4[1]) - (p1[1] - p3[1]) * (p3[0] - p4[0])) / d;
-            const u = -((p1[0] - p2[0]) * (p1[1] - p3[1]) - (p1[1] - p2[1]) * (p1[0] - p3[0])) / d;
-            
-            return [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])];
-        }
+        // Initialize Generator
+        const generator = new VillageGenerator('mapCanvas');
         
-        // --- UPDATED: Removed stroke for urban buildings ---
-        function drawUrbanFeatures(ctx, cell, mainRoadEdges, drivewayEdges, mainRoadWidth, drivewayWidth) {
-            ctx.save();
-            
-            ctx.beginPath();
-            ctx.moveTo(cell[0][0], cell[0][1]);
-            for (let j = 1; j < cell.length; j++) {
-                ctx.lineTo(cell[j][0], cell[j][1]);
-            }
-            ctx.closePath();
-            ctx.clip(); 
-
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'; 
-            ctx.shadowBlur = 3;
-            ctx.shadowOffsetX = 1.5;
-            ctx.shadowOffsetY = 1.5;
-            ctx.fillStyle = '#62461b'; 
-            ctx.strokeStyle = '#362513'; // Kept for consistency, but not used for stroke
-            ctx.lineWidth = 1; 
-
-            
-            const roadFrontages = [];
-            const allRoadEdges = new Set([...mainRoadEdges, ...drivewayEdges]);
-            
-            for (let j = 0; j < cell.length; j++) {
-                const p1 = cell[j];
-                const p2 = cell[(j + 1) % cell.length];
-                const p1Key = `${p1[0].toFixed(2)},${p1[1].toFixed(2)}`;
-                const p2Key = `${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
-                const canonicalKey = [p1Key, p2Key].sort().join('|');
-
-                if (allRoadEdges.has(canonicalKey)) {
-                    roadFrontages.push({edge: [p1, p2], isMain: mainRoadEdges.has(canonicalKey)});
-                }
-            }
-            
-            if (roadFrontages.length === 0) {
-                ctx.restore();
-                return;
-            }
-
-            const centroid = getPolygonCentroid(cell);
-            const minBuildingWidth = 10;
-            const maxBuildingWidth = 25;
-            
-            roadFrontages.forEach(frontage => {
-                const { edge, isMain } = frontage;
-                const [p1, p2] = edge;
-                const edgeLength = Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
-                const edgeAngle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
-                
-                let inwardX = p2[1] - p1[1];
-                let inwardY = -(p2[0] - p1[0]);
-                const norm = Math.hypot(inwardX, inwardY) || 1;
-                inwardX /= norm; inwardY /= norm;
-
-                if ((centroid[0] - p1[0]) * inwardX + (centroid[1] - p1[1]) * inwardY < 0) {
-                    inwardX *= -1; inwardY *= -1;
-                }
-                
-                let currentPos = 0;
-                while (currentPos < edgeLength) {
-                    let lotWidth = minBuildingWidth + Math.random() * (maxBuildingWidth - minBuildingWidth);
-                    if (currentPos + lotWidth > edgeLength) {
-                        lotWidth = edgeLength - currentPos; 
-                    }
-                    if (lotWidth < minBuildingWidth / 2) break; 
-                    
-                    const roadWidth = isMain ? mainRoadWidth : drivewayWidth;
-                    const halfRoadWidth = roadWidth / 2;
-                    const sidewalk = 1 + Math.random() * 2; 
-                    const setback = halfRoadWidth + sidewalk;
-
-                    const edgeVecX = (p2[0] - p1[0]) / edgeLength;
-                    const edgeVecY = (p2[1] - p1[1]) / edgeLength;
-
-                    const midPointOnEdge = currentPos + lotWidth / 2;
-                    const lotCenterX_onEdge = p1[0] + edgeVecX * midPointOnEdge;
-                    const lotCenterY_onEdge = p1[1] + edgeVecY * midPointOnEdge;
-
-                    const buildingFrontX = lotCenterX_onEdge + inwardX * setback;
-                    const buildingFrontY = lotCenterY_onEdge + inwardY * setback;
-                    
-                    const distToCentroid = Math.hypot(centroid[0] - buildingFrontX, centroid[1] - buildingFrontY);
-                    const maxDepth = distToCentroid * 2; 
-                    const buildingDepth = maxDepth * (0.2 + Math.random() * 0.2); 
-                    
-                    if (buildingDepth < 5) { 
-                         currentPos += lotWidth;
-                         continue;
-                    }
-
-                    const buildingCenterX = buildingFrontX + inwardX * (buildingDepth / 2);
-                    const buildingCenterY = buildingFrontY + inwardY * (buildingDepth / 2);
-
-                    ctx.save();
-                    ctx.translate(buildingCenterX, buildingCenterY);
-                    ctx.rotate(edgeAngle);
-                    ctx.fillRect(-lotWidth / 2, -buildingDepth / 2, lotWidth, buildingDepth);
-                    // ctx.strokeRect(-lotWidth / 2, -buildingDepth / 2, lotWidth, buildingDepth); // REMOVED BORDER
-                    ctx.restore();
-                    
-                    currentPos += lotWidth;
-                }
-            });
-            ctx.restore();
-        }
-
-        // --- UPDATED: Removed stroke for suburban buildings ---
-        function drawSuburbanFeatures(ctx, cell, mainRoadEdges) {
-            const centroid = getPolygonCentroid(cell);
-            if (!cell) return;
-            
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(cell[0][0], cell[0][1]);
-            for (let j = 1; j < cell.length; j++) {
-                ctx.lineTo(cell[j][0], cell[j][1]);
-            }
-            ctx.closePath();
-            ctx.clip();
-
-            const sizeVariation = 1 + (Math.random() - 0.5) * 0.1;
-            const baseSize = Math.min(canvas.width / 40, 12) * sizeVariation;
-
-            const houseCenterX = centroid[0];
-            const houseCenterY = centroid[1];
-            let finalAngle;
-
-            let mainRoadFrontage = null;
-            let nearestEdgeAngle = 0;
-            let minDistance = Infinity;
-
-            for (let i = 0; i < cell.length; i++) {
-                const p1 = cell[i];
-                const p2 = cell[(i + 1) % cell.length];
-                
-                const p1Key = `${p1[0].toFixed(2)},${p1[1].toFixed(2)}`;
-                const p2Key = `${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
-                const canonicalKey = [p1Key, p2Key].sort().join('|');
-
-                if (mainRoadEdges.has(canonicalKey)) {
-                    mainRoadFrontage = [p1, p2];
-                    break;
-                }
-                
-                const distance = pointToSegmentDistance(centroid, p1, p2);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestEdgeAngle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
-                }
-            }
-
-            if (mainRoadFrontage) {
-                const [p1, p2] = mainRoadFrontage;
-                const roadAngle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
-                finalAngle = roadAngle + (Math.random() - 0.5) * 10 * (Math.PI / 180); 
-            } else {
-                const randomRotation = (Math.random() - 0.5) * 10 * (Math.PI / 180);
-                finalAngle = nearestEdgeAngle + randomRotation;
-            }
-
-            ctx.save(); 
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'; 
-            ctx.shadowBlur = 3;
-            ctx.shadowOffsetX = 1.5;
-            ctx.shadowOffsetY = 1.5;
-            ctx.fillStyle = '#62461b'; 
-            ctx.strokeStyle = '#362513'; // Kept for consistency, but not used for stroke
-            ctx.lineWidth = 1; 
-
-            ctx.translate(houseCenterX, houseCenterY);
-            ctx.rotate(finalAngle);
-            
-            const shapeType = Math.floor(Math.random() * 3);
-
-            switch (shapeType) {
-                case 0: // L-shape
-                    ctx.fillRect(-baseSize * 1.5, -baseSize / 2, baseSize * 3, baseSize);
-                    // ctx.strokeRect(-baseSize * 1.5, -baseSize / 2, baseSize * 3, baseSize); // REMOVED BORDER
-                    ctx.fillRect(baseSize * 0.5, baseSize / 2, baseSize, baseSize * 2);
-                    // ctx.strokeRect(baseSize * 0.5, baseSize / 2, baseSize, baseSize * 2); // REMOVED BORDER
-                    break;
-                case 1: // U-shape
-                    ctx.fillRect(-baseSize * 1.5, -baseSize * 1.5, baseSize, baseSize * 3);
-                    // ctx.strokeRect(-baseSize * 1.5, -baseSize * 1.5, baseSize, baseSize * 3); // REMOVED BORDER
-                    ctx.fillRect(baseSize * 0.5, -baseSize * 1.5, baseSize, baseSize * 3);
-                    // ctx.strokeRect(baseSize * 0.5, -baseSize * 1.5, baseSize, baseSize * 3); // REMOVED BORDER
-                    ctx.fillRect(-baseSize * 0.5, baseSize * 0.5, baseSize, baseSize);
-                    // ctx.strokeRect(-baseSize * 0.5, baseSize * 0.5, baseSize, baseSize); // REMOVED BORDER
-                    break;
-                case 2: // T-shape
-                    ctx.fillRect(-baseSize * 1.5, -baseSize / 2, baseSize * 3, baseSize);
-                    // ctx.strokeRect(-baseSize * 1.5, -baseSize / 2, baseSize * 3, baseSize); // REMOVED BORDER
-                    ctx.fillRect(-baseSize / 2, baseSize / 2, baseSize, baseSize * 2);
-                    // ctx.strokeRect(-baseSize / 2, baseSize / 2, baseSize, baseSize * 2); // REMOVED BORDER
-                    break;
-            }
-
-            ctx.restore(); // Restore from translation/rotation
-            ctx.restore(); // Restore from clipping
-        }
+        window.addEventListener('load', () => generator.init());
         
-        // MODIFIED: This function now just GENERATES points, doesn't draw
-        function generateRuralTreePoints(cell) {
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            cell.forEach(p => { minX = Math.min(minX, p[0]); minY = Math.min(minY, p[1]); maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]); });
-            
-            const treeCount = Math.floor(Math.random() * 3) + 2; // 2-4 trees per rural cell
-            const treePoints = [];
-            for(let k=0; k < treeCount; k++) {
-                let attempts = 0;
-                while(attempts < 50) {
-                    const randX = minX + Math.random() * (maxX - minX);
-                    const randY = minY + Math.random() * (maxY - minY);
-                    if (isPointInPolygon([randX, randY], cell)) {
-                        treePoints.push({x: randX, y: randY});
-                        break;
-                    }
-                    attempts++;
-                }
-            }
-            return treePoints;
-        }
+        document.getElementById('regenerateButton').addEventListener('click', () => {
+            generator.init();
+        });
+        
+        // Modal logic
+        document.getElementById('helpButton').addEventListener('click', () => {
+            document.getElementById('helpModal').classList.remove('hidden');
+        });
+        document.getElementById('closeHelpButton').addEventListener('click', () => {
+            document.getElementById('helpModal').classList.add('hidden');
+        });
+        document.getElementById('modalOverlay').addEventListener('click', () => {
+            document.getElementById('helpModal').classList.add('hidden');
+        });
 
-        // NEW FUNCTION: Draws all trees at once
-        function drawAllRuralTrees(ctx, treePoints, allRoadSegments) {
-            const trunkWidth = Math.max(2, canvas.width / 200);
-            const trunkHeight = trunkWidth * 3;
-            const branchLength = trunkWidth * 4;
-            
-            treePoints.forEach(tree => {
-                // Check distance to all roads
-                let onRoad = false;
-                for (const road of allRoadSegments) {
-                    const dist = pointToSegmentDistance([tree.x, tree.y], road.p1, road.p2);
-                    if (dist < road.width / 2 + trunkWidth) {
-                        onRoad = true;
-                        break;
-                    }
-                }
-                if (onRoad) return; // Skip drawing this tree
-
-                // Draw Shadow
-                ctx.save();
-                ctx.strokeStyle = 'rgba(90, 75, 60, 0.2)'; // Transparent sepia shadow
-                ctx.lineWidth = trunkWidth;
-                ctx.filter = 'blur(2px)';
-                const shadowOffsetX = 2;
-                const shadowOffsetY = 2;
-                
-                // Shadow Trunk
-                ctx.beginPath();
-                ctx.moveTo(tree.x + shadowOffsetX, tree.y + trunkHeight + shadowOffsetY);
-                ctx.lineTo(tree.x + shadowOffsetX, tree.y + shadowOffsetY);
-                ctx.stroke();
-                
-                // Shadow Branches
-                ctx.lineWidth = trunkWidth * 0.6;
-                const numBranches = 3 + Math.floor(Math.random() * 2);
-                for(let i=0; i<numBranches; i++) {
-                    const angle = (Math.random() - 0.5) * Math.PI * 0.8 - Math.PI/2;
-                    const len = branchLength * (0.7 + Math.random() * 0.3);
-                    ctx.beginPath();
-                    ctx.moveTo(tree.x + shadowOffsetX, tree.y + shadowOffsetY);
-                    ctx.lineTo(tree.x + shadowOffsetX + Math.cos(angle) * len, tree.y + shadowOffsetY + Math.sin(angle) * len);
-                    ctx.stroke();
-                }
-                ctx.restore();
-
-
-                // Draw Tree
-                ctx.strokeStyle = '#8c775d'; // Light sepia brown for trunks/branches
-                ctx.lineWidth = trunkWidth;
-
-                // Draw trunk
-                ctx.beginPath();
-                ctx.moveTo(tree.x, tree.y + trunkHeight);
-                ctx.lineTo(tree.x, tree.y);
-                ctx.stroke();
-                
-                // Draw branches
-                ctx.lineWidth = trunkWidth * 0.6;
-                for(let i=0; i<numBranches; i++) {
-                    const angle = (Math.random() - 0.5) * Math.PI * 0.8 - Math.PI/2; // More "upward" branches
-                    const len = branchLength * (0.7 + Math.random() * 0.3);
-                    ctx.beginPath();
-                    ctx.moveTo(tree.x, tree.y);
-                    ctx.lineTo(tree.x + Math.cos(angle) * len, tree.y + Math.sin(angle) * len);
-                    ctx.stroke();
-                }
-            });
-        }
-
-        // --- UPDATED EXPORT FUNCTION ---
-        function exportMapAsPNG() {
-            // Create a new in-memory canvas
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = canvas.width;
-            exportCanvas.height = canvas.height;
-            const exportCtx = exportCanvas.getContext('2d');
-            
-            // 1. Draw the background color
-            exportCtx.fillStyle = '#f4e2ca';
-            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-            
-            // 2. Draw the live canvas on top of it
-            exportCtx.drawImage(canvas, 0, 0);
-            
-            // 3. Export the in-memory canvas using toBlob for Firefox
-            exportCanvas.toBlob(function(blob) {
+        // Export PNG
+        document.getElementById('exportButton').addEventListener('click', () => {
+            generator.canvas.toBlob(function(blob) {
+                if (!blob) return;
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                
-                // Use the stored village name for the file
-                const filename = currentVillageName || 'village_map';
-                link.download = `${filename}.png`;
+                link.download = `${generator.villageName || 'village_map'}.png`;
                 link.href = url;
                 
-                // Append to body and click for Firefox compatibility
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 
-                // Clean up the temporary URL
                 URL.revokeObjectURL(url);
             }, 'image/png');
-        }
+        });
 
-
-        function setupAndDraw() {
-            const rect = canvas.parentElement.getBoundingClientRect();
-            const size = Math.round(rect.width);
-            if (size <= 0) {
-                requestAnimationFrame(setupAndDraw);
-                return;
-            }
-            if (canvas.width !== size) {
-                canvas.width = size;
-                canvas.height = size;
-            }
-            
-            // --- Generate Village Name ---
-            const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-            const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-            currentVillageName = prefix + suffix; // Store name
-            subtitleEl.textContent = currentVillageName; // Set name
-            
-            // --- Generate and Draw Map ---
-            seeds = generateNormalizedSeeds();
-            drawMap();
-        }
-
-        // --- Modal Event Listeners ---
-        function openModal() { helpModal.classList.remove('hidden'); }
-        function closeModal() { helpModal.classList.add('hidden'); }
-
-        helpButton.addEventListener('click', openModal);
-        closeHelpButton.addEventListener('click', closeModal);
-        modalOverlay.addEventListener('click', closeModal);
-
-
-        // --- Main Event Listeners ---
-        window.addEventListener('load', setupAndGo);
-        window.addEventListener('resize', setupAndGo);
-        regenerateButton.addEventListener('click', setupAndGo);
-        exportButton.addEventListener('click', exportMapAsPNG);
-        
-        function setupAndGo() {
-            try {
-                setupAndDraw();
-            } catch (e) {
-                console.error("Error during setup:", e);
-            }
-        }
-        
     </script>
 </body>
 </html>
-
